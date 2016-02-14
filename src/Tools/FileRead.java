@@ -1,9 +1,4 @@
-/** 
- * Classes authors. 
- * @author Chitimbo Manyanda a Master Student at the University of Pierre and Marie Curie. 
- * @author Larbi Mohamed  Youcef   also a Master Student at the same university
- */
-
+package Tools;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,9 +9,20 @@ import java.util.Collections;
 import java.util.List;
 
 public class FileRead {
-	
+	public static String toWord(String s) {
+		StringBuffer res = new StringBuffer();
+		int size = s.length();
+		for (int i = 0; i < size; i++) {
+			char c = s.charAt(i);
+			if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+				res.append(c);
+			}
+		}
+		return res.toString();
+	}
 	/*Retourne la liste des mots présents dans le fichier fileName*/
 	public static String[] readWord(File fileName) throws IOException {
+		
 		BufferedReader br = new BufferedReader(new FileReader(fileName));
 		try {
 			StringBuilder sb = new StringBuilder();
@@ -34,19 +40,17 @@ public class FileRead {
 	}
 
 	/*Retourne la liste des mots dans tous les fichiers dans le dossier nomDirectory*/
-	public static String[] readDirectory(String nomDirectory) throws IOException {
-		File dir = new File(nomDirectory);
+	public static String[] readDirectory(String dirName) throws IOException {
+		File dir = new File(dirName);
 		String[] buffer = new String[0];
 		if (!dir.isDirectory()) {
 			return buffer;
 		} else {
 			String[] files = dir.list();
+			for (int i = 0; i < files.length; i++) { 
+				File temp = new File(dirName+"/"+files[i]);
+				buffer = concat(buffer, readWord(temp));
 
-			for (int i = 0; i < files.length; i++) {
-				File temp = new File(dir.getName()+"/"+files[i]);
-				if (temp.isFile()) {
-					buffer = concat(buffer, readWord(temp));
-				}
 			}
 			return buffer;
 		}

@@ -13,5 +13,6 @@ public interface IArbre {
 	int countNull(); 
 	int height(); 
 	int countPrefix(String prefix); 
+	float averageDepth(); 
 
 }

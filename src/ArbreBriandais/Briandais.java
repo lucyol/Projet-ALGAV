@@ -1,10 +1,17 @@
 package ArbreBriandais;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 import java.util.ArrayList;
 
+import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 
 import Interfaces.IArbre;
 import Interfaces.IBriandais;
+import Interfaces.ITrieHybride;
+import TrieHybrid.TrieHybride;
 
 
 public class Briandais implements IBriandais{
@@ -92,26 +99,22 @@ public class Briandais implements IBriandais{
 					return this;
 			}
 		} else {
-			if (word.charAt(0) < key) {
-				return new Briandais(word.charAt(0), new Briandais(
+			if (head(word) < key) {
+				return new Briandais(head(word), new Briandais(
 						word.substring(1)), this);
 			} else {
-				if (key < word.charAt(0)) {
+				if (key < head(word)) {
 					if (next != null) {
-						return new Briandais(key, fils,
-								(IBriandais) ((Briandais) next).add(word));
+						return new Briandais(key, fils,(IBriandais) ((Briandais) next).add(word));
 					} else {
 						return new Briandais(key, fils, new Briandais(word));
 					}
 
 				} else {
 					if (fils != null) {
-						return new Briandais(key,
-								(IBriandais) ((Briandais) fils).add(word
-										.substring(1)), next);
+						return new Briandais(key,(IBriandais) ((Briandais) fils).add(tail(word)), next);
 					} else {
-						return new Briandais(key, new Briandais(
-								word.substring(1)), next);
+						return new Briandais(key, new Briandais(tail(word)), next);
 					}
 				}
 			}
@@ -224,10 +227,40 @@ public class Briandais implements IBriandais{
 			return 1 + fils.height();
 		}
 
-		return 1 + ((fils.height() > next.height()) ? fils.height(): next.height());
+		return (((1+fils.height()) > next.height()) ? fils.height(): next.height());
 		
 	}
 	
+	/* Retourne la profondeur moyenne des feuilles de l'arbre*/
+	public float averageDepth(){
+		
+		double s =(float) depthSum(0); 
+		double c = (float) countLeaves(); 
+		
+		return (float) (s/c); 
+	}
+	
+	private int depthSum(int depth){
+		if(fils == null && next == null)
+			return depth; 
+		else if (fils == null && next != null)
+			return ((Briandais) next).depthSum(depth); 
+		else if (fils != null && next == null)
+			return ((Briandais) fils).depthSum(++depth); 
+		else
+			return ((Briandais) next).depthSum(depth) + ((Briandais) fils).depthSum(depth+1); 
+	}
+	
+	private int countLeaves(){
+		if(fils == null && next == null)
+			return 1; 
+		else if(fils == null)
+			return ((Briandais) next).countLeaves(); 
+		else if(next == null)
+			return ((Briandais) fils).countLeaves(); 
+		else 
+			return ((Briandais) fils).countLeaves()+((Briandais) next).countLeaves();
+	}
 	
 	/* Retourne le nombre de mots ayant prefix comme prefixe dans l'arbre*/
 	public int countPrefix(String prefix){
@@ -248,12 +281,100 @@ public class Briandais implements IBriandais{
 	
 	/* Suprime le mot word de l'arbre*/
 
-	@Override
-	public IArbre delete(String word) {
-		// TODO Auto-generated method stub
-		return null;
+	public static IBriandais delete(IBriandais ab, String word) {
+		
+		if(ab==null){
+			return null; 
+		}
+		
+		if(ab.isEmpty() && word.isEmpty()){
+			return ab.getNext(); 
+		}
+		
+		if(ab.getKey() == head(word)){
+			Briandais child = (Briandais) ab.getFils().delete(tail(word)); 
+			if(child == null){
+				return ab.getNext(); 
+			}else{
+				return new Briandais(ab.getKey(), child, ab.getNext()); 
+			}
+			
+		}
+		if(ab.getKey() > head(word)){
+			return ab; 
+		}
+		if(ab.getKey() < head(word)){
+			return new Briandais(ab.getKey(), ab.getFils(), (IBriandais) delete(ab.getNext(), word)); 
+		}
+		return null; 
 	}
+	
 
+	public synchronized static IBriandais fusion(IBriandais ab1, IBriandais ab2){
+		
+		if(ab1 == null) { return ab2; }
+		if(ab2 == null) { return ab1; }
+		
+		if(ab2.getKey() < ab1.getKey())
+			return new Briandais(ab2.getKey(), ab2.getFils(), fusion(ab1, ab2.getNext())); 
+		else if(ab2.getKey() > ab1.getKey())
+			return new Briandais(ab1.getKey(), ab1.getFils(), fusion(ab2, ab1.getNext()));
+		else
+			return new Briandais(ab1.getKey(), fusion(ab1.getFils(), ab2.getFils()), fusion(ab1.getNext(), ab2.getNext())); 
+			
+		
+	}
+	
+	public TrieHybride conversion(){
+		if(isEmpty())
+			return new TrieHybride();
+		else{
+			ArrayList<String> list = this.listWords();
+			TrieHybride trie = new TrieHybride(); 
+			for(String w : list){
+				trie=(TrieHybride) trie.add(w); 
+			}
+			return trie; 
+		}
+	}
+	
+	/*Fonctions permettant une visualisation graphique grace a GNUPLOT*/
+	public void plotBriandais(){	 
+		tmpPlot(this, 0, 0, 0); 	
+	}
+	
+	private static int tmpPlot(Briandais ab, long X ,long Y, int next){
+		if(ab == null){
+			return 0; 
+		}
+		
+		int w;
+		
+		if(next ==1) {
+			 if (ab.getKey() == charVide) 
+			 	 System.out.println("//0 "+X+" "+Y+"\n");
+		     else                   
+		    	 System.out.println(ab.getKey()+" "+X+" "+Y+"\n"); 
+		}
+		
+		 if (ab.getKey()== charVide) 
+			 System.out.println(("//0 "+X+" "+Y)); 
+		  else                   
+			 System.out.println(ab.getKey()+" "+X+" "+Y); 
+		 
+		 
+		 w =  tmpPlot((Briandais) ab.getFils(), X, Y + 10, 0);
+		 w = w < 10?10:w;
+		 
+		 System.out.println(); 
+		 
+		 if (ab.getKey()== charVide) 
+			 System.out.println(("//0 "+X+" "+Y)); 
+		  else                   
+		 	System.out.println(ab.getKey()+" "+X+" "+Y); 
+
+		  return (w) + tmpPlot((Briandais) ab.getNext(), (X+w), Y, 1);
+	}
 	
 	
 	/*Methodes utiles*/
@@ -263,6 +384,12 @@ public class Briandais implements IBriandais{
 	
 	private static String tail(String word){
 		return word.substring(1);
+	}
+
+	@Override
+	public IArbre delete(String word) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 
